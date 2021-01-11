@@ -117,5 +117,5 @@ def query_all_gain(addr):
 def run_dummy_oe(port, addr):
     while True:
         addr, cmd, ack, payload=await_cmd(port)
-        print(addr, cmd, ack, payload)
+        print("0x{0:X} 0x{1:X} {2} {3}".format(addr, cmd, ack, payload))
         port.write(respond_cmd(addr, cmd, payload))
