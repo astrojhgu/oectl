@@ -3,13 +3,16 @@
 import crcmod
 import struct
 import serial
+import time
 crc=crcmod.mkCrcFun(0x11021,rev=False,initCrc=0x00)
+
+baudrate=57600
 
 def calc_checksum(x):
     return struct.pack('<H',crc(bytes(x)))
 
 def pack_msg(data):
-    assert(len(data)-5==data[-3])
+    assert(len(data)-5==data[4])
     cs=calc_checksum(data[1:])
     return bytes(data)+cs+b'\x7f'
 
@@ -22,6 +25,47 @@ def unpack_msg(data):
     assert(len(checksum)==2)
     assert(bytes(rest[-1:])==b'\x7f')
     return addr, cmd, ack, payload
+
+def await_cmd(port):
+    while port.inWaiting()==0:
+        time.sleep(0.5)
+    return unpack_msg(port.read_all())
+
+def respond_cmd(addr, cmd, payload):
+    result=0x00
+    if cmd==0x20:
+        return single_gain_ack(addr, result)
+    elif cmd==0x21:
+        return all_gain_ack(addr, result)
+    elif cmd==0x22:
+        return addr_ack(addr, result)
+    elif cmd==0x11:
+        return single_gain_reply(addr, payload[0], 44,55,66, result)
+    else:
+        raise NotImplementedError
+
+
+def await_response(port):
+    while port.inWaiting()==0:
+        time.sleep(0.5)
+    return unpack_msg(port.read_all())
+
+def parse_response(addr, cmd, ack, payload):
+    if cmd==0x20:
+        print("Ack of set single gain:{0}".format(ack))
+    elif cmd==0x21:
+        print("Ack of set all gain:{0}".format(ack))
+    elif cmd==0x22:
+        print("Ack of address setting:{0} {1}".format(ack, addr))
+    elif cmd==0x11:
+        ch, gain, power, current=payload
+        print("Ack of status of ch {0}:{1} gain={2} power={3} current={4}".format(addr, ch, gain, power, current))
+    else:
+        raise NotImplementedError
+
+def await_response_and_parse(port):
+    addr, cmd, ack, payload=await_response(port)
+    parse_response(addr, cmd, ack, payload)
 
 
 def set_single_gain(addr, ch, value):
@@ -58,12 +102,20 @@ def single_gain_reply(addr, ch, gain, power, current, result):
     data=[0x7e, addr, 0x11, result, 0x04, ch, gain, power, current]
     return pack_msg(data)
 
+def ch2addr(ch):
+    if ch<=20:
+        return 0x11,ch
+    elif ch>=21 and ch<=40:
+        return 0x12, ch-20
+    else:
+        raise RuntimeError("ch {0} out of range".format(ch))
 
 def query_all_gain(addr):
     data=[0x7e, addr, 0x12, 0x00, 0x01, 0x00]
     return pack_msg(data)
 
-
-
-msg=set_single_gain(11, 1, 24)
-print(unpack_msg(msg))
+def run_dummy_oe(port, addr):
+    while True:
+        addr, cmd, ack, payload=await_cmd(port)
+        print(addr, cmd, ack, payload)
+        port.write(respond_cmd(addr, cmd, payload))
