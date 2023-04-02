@@ -29,7 +29,10 @@ def unpack_msg(data):
 def await_cmd(port):
     while port.inWaiting()==0:
         time.sleep(0.5)
-    return unpack_msg(port.read_all())
+    cmd=port.read_all()
+    print("raw bytes:")
+    print_msg(cmd)
+    return unpack_msg(cmd)
 
 def respond_cmd(addr, cmd, payload):
     result=0x00
@@ -48,7 +51,10 @@ def respond_cmd(addr, cmd, payload):
 def await_response(port):
     while port.inWaiting()==0:
         time.sleep(0.5)
-    return unpack_msg(port.read_all())
+    response=port.read_all()
+    print("response raw message:")
+    print_msg(response)
+    return unpack_msg(response[:-1])
 
 def parse_response(addr, cmd, ack, payload):
     if cmd==0x20:
@@ -117,5 +123,9 @@ def query_all_gain(addr):
 def run_dummy_oe(port, addr):
     while True:
         addr, cmd, ack, payload=await_cmd(port)
+        print("decoded cmd:")
         print("0x{0:X} 0x{1:X} {2} {3}".format(addr, cmd, ack, payload))
         port.write(respond_cmd(addr, cmd, payload))
+
+def print_msg(msg):
+    print(" ".join(["0x%02x"%(i) for i in msg]))
