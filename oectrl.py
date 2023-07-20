@@ -37,13 +37,13 @@ def await_cmd(port):
 def respond_cmd(addr, cmd, payload):
     result=0x00
     if cmd==0x20:
-        return single_gain_ack(addr, result)
+        return single_atta_ack(addr, result)
     elif cmd==0x21:
-        return all_gain_ack(addr, result)
+        return all_atta_ack(addr, result)
     elif cmd==0x22:
         return addr_ack(addr, result)
     elif cmd==0x11:
-        return single_gain_reply(addr, payload[0], 44,55,66, result)
+        return single_atta_reply(addr, payload[0], 44,55,66, result)
     else:
         raise NotImplementedError
 
@@ -58,14 +58,14 @@ def await_response(port):
 
 def parse_response(addr, cmd, ack, payload):
     if cmd==0x20:
-        print("Ack of set single gain:{0}".format(ack))
+        print("Ack of set single atta:{0}".format(ack))
     elif cmd==0x21:
-        print("Ack of set all gain:{0}".format(ack))
+        print("Ack of set all atta:{0}".format(ack))
     elif cmd==0x22:
         print("Ack of address setting:{0} {1}".format(ack, addr))
     elif cmd==0x11:
-        ch, gain, power, current=payload
-        print("Ack of status of ch {0}:{1} gain={2} power={3} current={4}".format(addr, ch, gain, power, current))
+        ch, atta, power, current=payload
+        print("Ack of status of ch {0}:{1} atta={2} power={3} current={4}".format(addr, ch, atta, power, current))
     else:
         raise NotImplementedError
 
@@ -74,20 +74,20 @@ def await_response_and_parse(port):
     parse_response(addr, cmd, ack, payload)
 
 
-def set_single_gain(addr, ch, value):
+def set_single_atta(addr, ch, value):
     data=[0x7e, addr, 0x20, 0x00, 0x02, ch, value]
     return pack_msg(data)
 
-def single_gain_ack(addr, result):
+def single_atta_ack(addr, result):
     data=[0x7e, addr, 0x20, result, 0x01, 0x00]
     return pack_msg(data)
 
 
-def set_all_gain(addr, gains):
-    data=[0x7e, addr, 0x21, 0x00, 0x14]+gains
+def set_all_atta(addr, attas):
+    data=[0x7e, addr, 0x21, 0x00, 0x14]+attas
     return pack_msg(data)
 
-def all_gain_ack(addr, result):
+def all_atta_ack(addr, result):
     data=[0x7e, addr, 0x21, result, 0x01, 0x00]
     return pack_msg(data)
 
@@ -100,12 +100,12 @@ def addr_ack(addr, result):
     data=[0x7e, addr, 0x22, result, 0x01, 0x00]
     return pack_msg(data)
 
-def query_single_gain(addr, ch):
+def query_single_atta(addr, ch):
     data=[0x7e, addr, 0x11, 0x00, 0x01, ch]
     return pack_msg(data)
 
-def single_gain_reply(addr, ch, gain, power, current, result):
-    data=[0x7e, addr, 0x11, result, 0x04, ch, gain, power, current]
+def single_atta_reply(addr, ch, atta, power, current, result):
+    data=[0x7e, addr, 0x11, result, 0x04, ch, atta, power, current]
     return pack_msg(data)
 
 def ch2addr(ch):
@@ -116,7 +116,7 @@ def ch2addr(ch):
     else:
         raise RuntimeError("ch {0} out of range".format(ch))
 
-def query_all_gain(addr):
+def query_all_atta(addr):
     data=[0x7e, addr, 0x12, 0x00, 0x01, 0x00]
     return pack_msg(data)
 
